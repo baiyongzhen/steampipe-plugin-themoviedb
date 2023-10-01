@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+  steampipe:
+    build:
+      context: .
+    command: ["service", "start", "--foreground", "--show-password"]
+    ports:
+      - 9193:9193
+      - 9194:9194
+    volumes:
+      - ./config/steampipe:/home/steampipe/.steampipe/config
+      - ./build/steampipe-plugin-themoviedb.plugin:/home/steampipe/.steampipe/plugins/local/themoviedb/themoviedb.plugin
+      - ./logs:/home/steampipe/.steampipe/logs
+    environment:
+      - STEAMPIPE_DATABASE_PASSWORD=steampipe
+      - STEAMPIPE_CACHE=true
+      - STEAMPIPE_CACHE_MAX_SIZE_MB=4096
+      - STEAMPIPE_CACHE_TTL=5
+      - STEAMPIPE_QUERY_TIMEOUT=120
+      - STEAMPIPE_MAX_PARALLEL=10
+      - STEAMPIPE_LOG_LEVEL=TRACE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  grafana:
+    image: grafana/grafana:9.4.7
+    depends_on:
+      - steampipe
+    volumes:
+     - ./config/grafana/dashboards:/etc/grafana/dashboards
+     - ./config/grafana/provisioning/dashboards/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+     - ./config/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - "3000:3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
